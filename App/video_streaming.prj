@@ -1,11 +1,11 @@
 <deployment-project plugin="plugin.webdeploy" plugin-version="1.0">
-  <configuration file="C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App\two_tank_lab.prj" location="C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App" name="two_tank_lab" target="target.webdeploy" target-name="Web App Compiler">
-    <param.appname>two_tank_lab</param.appname>
-    <param.intermediate>${PROJECT_ROOT}\two_tank_lab</param.intermediate>
-    <param.files.only>${PROJECT_ROOT}\two_tank_lab</param.files.only>
+  <configuration file="C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App\video_streaming.prj" location="C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App" name="video_streaming" target="target.webdeploy" target-name="Web App Compiler">
+    <param.appname>video_streaming</param.appname>
+    <param.intermediate>${PROJECT_ROOT}\video_streaming</param.intermediate>
+    <param.files.only>${PROJECT_ROOT}\video_streaming</param.files.only>
     <param.output />
     <param.checkbox>false</param.checkbox>
-    <param.logdir>${PROJECT_ROOT}\two_tank_lab</param.logdir>
+    <param.logdir>${PROJECT_ROOT}\video_streaming</param.logdir>
     <param.target.type>subtarget.web.app</param.target.type>
     <param.user.defined.mcr.options />
     <param.support.packages />
@@ -20,18 +20,13 @@
       <param.support.packages />
     </unset>
     <fileset.web.main>
-      <file>${PROJECT_ROOT}\two_tank_lab.mlapp</file>
+      <file>${PROJECT_ROOT}\video_streaming.mlapp</file>
     </fileset.web.main>
     <fileset.resources />
-    <fileset.depfun>
-      <file>${PROJECT_ROOT}\excel_download.png</file>
-      <file>${PROJECT_ROOT}\MaIE.png</file>
-      <file>${PROJECT_ROOT}\send_file.png</file>
-      <file>${PROJECT_ROOT}\upload.png</file>
-    </fileset.depfun>
+    <fileset.depfun />
     <fileset.package />
     <build-deliverables>
-      <file location="${PROJECT_ROOT}\two_tank_lab" name="two_tank_lab.ctf" optional="false">C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App\two_tank_lab\two_tank_lab.ctf</file>
+      <file location="${PROJECT_ROOT}\video_streaming" name="video_streaming.ctf" optional="false">C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App\video_streaming\video_streaming.ctf</file>
     </build-deliverables>
     <workflow />
     <matlab>
