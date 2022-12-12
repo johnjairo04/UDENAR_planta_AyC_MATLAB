@@ -1,0 +1,11 @@
+req -nodes -x509 -days 120 -subj "/C=US/ST=MyState/L=MyCity/O=MyCompany/OU=Employees/CN=admin" \
+-addext "subjectAltName = DNS:JOHNJAIROG04" \
+-addext "keyUsage = keyEncipherment, dataEncipherment " \
+-addext "extendedKeyUsage = serverAuth " \
+-newkey rsa:2048 -keyout key.pem -out cert.pem
+
+req -nodes -x509 -days 120 -subj "/C=US/ST=MyState/L=MyCity/O=MyCompany/OU=Employees/CN=www.mycompanyurl.com" \
+-addext "subjectAltName = DNS:www.mycompanyurl.com" \
+-addext "keyUsage = keyEncipherment, dataEncipherment " \
+-addext "extendedKeyUsage = serverAuth " \
+-newkey rsa:2048 -keyout key.pem -out cert.pem

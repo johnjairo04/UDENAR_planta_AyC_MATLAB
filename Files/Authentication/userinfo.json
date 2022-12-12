@@ -1,0 +1,15 @@
+{
+  "version": "1.0.0",
+  "userInfo.doc": "Property values to be fetched during login from IdP",
+  "userInfo": {
+    "UserID": "uid",
+    "DisplayName":"displayName",
+    "Groups":"group",
+    "FirstName": "cn",
+    "Surname": "sn"
+  },
+  "appAccess.doc": "Policy for allowing access to user properties within an app or group of apps",
+  "appAccess": {
+    "two_tank_lab": ["UserID", "DisplayName", "FirstName", "Surname"]
+  }
+}

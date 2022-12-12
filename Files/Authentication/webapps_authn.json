@@ -1,0 +1,18 @@
+{
+    "version": "1.2.0",
+    "type": "ldap",
+    "authnConfig": {
+        "host": "JOHNJAIROG04",
+        "port": "636",
+        "searcherDN": "cn=admin,dc=udb,dc=com",
+        "searcherPassword": "secret",
+        "baseDN": "ou=Students,dc=udb,dc=com",
+        "userFilter": "(&(objectClass=person)(uid={username}))"
+    },
+    "appConfig": {
+        "checkSSLCA": "false",
+        "trustedSSLCA": "",
+        "displayName": "uid",
+        "tokenExpirationMin": "60"
+    }
+}

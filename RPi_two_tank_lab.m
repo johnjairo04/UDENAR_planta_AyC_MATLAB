@@ -1,6 +1,6 @@
 classdef RPi_two_tank_lab<handle
     properties (Access=private)
-        ip % ip address for raspberry pi
+        ip % raspberry pi ip address
         username % raspberry pi username
         password % raspberry pi password
         myraspi % raspberry pi object
@@ -9,28 +9,24 @@ classdef RPi_two_tank_lab<handle
         StartReg = 1025 % register for START button
         StopReg = 1026 % register for STOP button
         EmergReg = 1027 % register for EMERGENCY button
-        serialPort = 'COM2' % serial port for receiveng user commands 
-        serialDevice % serial port object
-        serialPort2 = 'COM3' % serial port for sending system variables/getting control commands
-        serialDevice2 % serial port 2 object
-        serialPort3 = 'COM4'
-        serialDevice3 
-        tcpPortInit = 30000
+        serialPort3 = 'COM4' % serial port to notify raspberry pi availability
+        serialDevice3 % serial port object
+        tcpPortInit = 30000 % tcp port for receiving client's commands (RPi connection)
         tcpServerInit % tcp server object
-        tcpPort1 = 31000
-        tcpServer1
-        tcpPort2 = 5555
-        tcpServer2
-        modbusPort = 502 % modbus port to get/send data to raspberry pi
-        modbusAddress % modbus server address
-        modbusServer % modbus server object
-        userTimeOut = 60; % time out to disconnect inactive user
+        tcpPort1 = 31000 % tcp port for receiving client's commands (PLC program)
+        tcpServer1 % tcp server object
+        tcpPort2 = 5555 % tcp port for monitoring system variables
+        tcpServer2 % tcp server object
+        modbusPort = 510 % modbus port to get/send data (PLC program)
+        modbusAddress % modbus server address (same as raspberry pi's)
+        modbusServer % modbus server object 
+        userTimeOut = 3*60; % time out (seconds) to disconnect inactive users
     end
     properties (Access=public)
         data_array = zeros(2, 10000); % array for storing system variables
-        count = 1 % count for number readings of system variables
+        count = 1 % number of readings made
         PLCRunning = 0; % '1' if PLC program is running
-        dataSize = 2
+        dataSize = 2 % number of readings to be made before updating GUI
     end
     methods
         %% Class constructor
@@ -47,32 +43,24 @@ classdef RPi_two_tank_lab<handle
             obj.tcpServer2 = tcpserver('0.0.0.0', obj.tcpPort2);
             configureCallback(obj.tcpServer2, 'byte', 1, ...
                 @obj.readControlVariables);
-
-            % Create serial ports
             obj.tcpServer1 = tcpserver('0.0.0.0', obj.tcpPort1);
             configureTerminator(obj.tcpServer1, 'LF');
             configureCallback(obj.tcpServer1, 'byte', 3, ...
                 @obj.readSerialCommand);
-%             obj.serialDevice = serialport(obj.serialPort, 921600);
-%             configureTerminator(obj.serialDevice, 'LF');
-%             configureCallback(obj.serialDevice, 'byte', 1,...
-%                 @obj.readSerialCommand); % User's commands
-%             obj.serialDevice2 = serialport(obj.serialPort2, 921600);
-%             configureCallback(obj.serialDevice2, 'byte', 1, ...
-%                 @obj.readControlVariables); % send and receive data
+            % Create serial ports
             obj.serialDevice3 = serialport(obj.serialPort3, 921600);
-            configureTerminator(obj.serialDevice3, 'LF'); % notify RPi availability
+            configureTerminator(obj.serialDevice3, 'LF');
             % Create timers
             obj.Timer = timer(...
                 'ExecutionMode', 'fixedSpacing', ...
-                'Period', 0.1,...
+                'Period', 0.1,... % system variables sampling frequency
                 'BusyMode', 'drop',...
                 'TimerFcn', @obj.TimerFcn,...
                 'ErrorFcn',@obj.TimerErrorFcn);
             stop(obj.Timer);
             obj.Timer2 = timer( ...
                 'ExecutionMode', 'singleShot', ...
-                'StartDelay', 3*60, ...
+                'StartDelay', obj.userTimeOut, ...
                 'BusyMode', 'queue', ...
                 'TimerFcn', @obj.Timer2Fcn);
             stop(obj.Timer2);
@@ -95,13 +83,14 @@ classdef RPi_two_tank_lab<handle
             log = load('user.mat'); % load log file
             user = log.user; % get user ID and status
             switch command
-                % Check if a user is connected
+                % Check if a user is already connected
                 case 'check'
-                % Connect raspberry pi
+                % Connect to raspberry pi
                 case 'connect'
-                    obj.count = 1;
+                    obj.count = 1; % reset counter
                     [obj, user.Status] = obj.connectRPi();
                     user.ID = userID;
+                    % Notifies raspberry pi availability to each user
                     write(obj.serialDevice3, [user.Status, '|', user.ID], 'char');
                     % Start timer for checking user connection
                     start(obj.Timer2);
@@ -173,7 +162,8 @@ classdef RPi_two_tank_lab<handle
                         obj.PLCRunning = 1;
                         % Send confirmation to user
                         writeline(obj.tcpServer1, '1');
-                    catch
+                    catch me
+                        display(me.message);
                         write(obj.tcpServer1, '0', 'char');
                     end
                 % Stop PLC program
@@ -193,18 +183,22 @@ classdef RPi_two_tank_lab<handle
                     end
                 % User connection confirmation
                 case 'connected'
+                    display('Restarting timer');
                     % Restart timer for checking user connection
                     stop(obj.Timer2);
                     start(obj.Timer2);
                 % Send PLC program file to raspberry pi
                 otherwise
                     try
+                        
                         system(obj.myraspi, 'sudo systemctl stop openplc');
-                        system(obj.myraspi, 'rm OpenPLC_v3/webserver/st_files/826743.st');
+                        display('sending PLC program...');
+                        system(obj.myraspi, 'rm OpenPLC_v3/webserver/st_files/810751.st');
                         putFile(obj.myraspi, command, '/home/pi/OpenPLC_v3/webserver/st_files');
-                        system(obj.myraspi, '(cd OpenPLC_v3/webserver/scripts/ ; sh compile_program.sh 826743.st)');
+                        system(obj.myraspi, '(cd OpenPLC_v3/webserver/scripts/ ; sh compile_program.sh 810751.st)');
                         writeline(obj.tcpServer1, '1');
-                    catch 
+                    catch me
+                        display(me.message);
                         writeline(obj.tcpServer1, '0');
                     end
             end
