@@ -1,161 +1,230 @@
 classdef RPi_two_tank_lab<handle
     properties (Access=private)
-        ip
-        username
-        password
-        myraspi
-        Timer
-        Timer2
-        StartReg = 1025
-        StopReg = 1026
-        EmergReg = 1027
-        serialPort = 'COM2'
-        serialDevice
-        serialPort2 = 'COM3'
-        serialDevice2
-        tcpServer
-        count = 0
-        data = zeros(1, 2);
-        modbusPort = 502
-        modbusAddress
-        modbusServer
-        dataSize = 1
-        userTimeOut = 60;
+        % Raspberry pi
+        ip % raspberry pi ip address
+        username % raspberry pi username
+        password % raspberry pi password
+        myraspi % raspberry pi object
+
+        % Timers
+        Timer % timer for reading system variables
+        Timer2 % timer for checking user connection
+
+        % Control panel
+        StartReg = 1025 % register for START button
+        StopReg = 1026 % register for STOP button
+        EmergReg = 1027 % register for EMERGENCY button
+
+        % Communication
+        serialPort3 = 'COM4' % serial port to notify raspberry pi availability
+        serialDevice3 % serial port object
+        tcpPortInit = 30000 % tcp port for receiving client's commands (RPi connection)
+        tcpServerInit % tcp server object
+        tcpPort1 = 31000 % tcp port for receiving client's commands (PLC program)
+        tcpServer1 % tcp server object
+        tcpPort2 = 5555 % tcp port for monitoring system variables
+        tcpServer2 % tcp server object
+        modbusPort = 502 % modbus port to get/send data (PLC program)
+        modbusAddress % modbus server address (same as raspberry pi's)
+        modbusServer % modbus server object
+
+        % User management
+        userTimeOut = 3*60; % time out (seconds) to disconnect inactive users
+
+        % OpenPLC filename
+        PLCfilename = '329424.st'
     end
     properties (Access=public)
-        test_array = zeros(2, 10000);
-        test_count = 1;
-        PLCRunning = 0;
+        data_array = zeros(9, 10000); % array for storing system variables
+        count = 1 % number of readings made
+        PLCRunning = 0; % '1' if PLC program is running
+        dataSize = 5 % number of readings to be made before updating GUI
     end
     methods
-        %% Constructor
+        %% Class constructor
         function obj = RPi_two_tank_lab(ip, username, password)
-            % RPi parameters
+            % Raspberry Pi parameters
             obj.ip = ip;
             obj.username = username;
             obj.password = password;
             obj.modbusAddress = ip;
-
-            % Create and set up TCP server
-            obj.tcpServer = tcpserver('0.0.0.0', 30000);
-            configureCallback(obj.tcpServer, 'byte', 1,...
+            % Create and set up TCP servers
+            obj.tcpServerInit = tcpserver('0.0.0.0', obj.tcpPortInit);
+            configureCallback(obj.tcpServerInit, 'byte', 1,...
                 @obj.readTCPClientCommand);
-
-            % Create serial ports
-            obj.serialDevice = serialport(obj.serialPort, 115200);
-            configureTerminator(obj.serialDevice, 'LF');
-            configureCallback(obj.serialDevice, 'byte', 1,...
-                @obj.readSerialCommand);
-
-            obj.serialDevice2 = serialport(obj.serialPort2, 115200);
-            configureCallback(obj.serialDevice2, 'byte', 1, ...
+            obj.tcpServer2 = tcpserver('0.0.0.0', obj.tcpPort2);
+            configureCallback(obj.tcpServer2, 'byte', 1, ...
                 @obj.readControlVariables);
-
+            obj.tcpServer1 = tcpserver('0.0.0.0', obj.tcpPort1);
+            configureTerminator(obj.tcpServer1, 'LF');
+            configureCallback(obj.tcpServer1, 'byte', 3, ...
+                @obj.readTCPCommandsPLC);
+            % Create serial ports
+            obj.serialDevice3 = serialport(obj.serialPort3, 921600);
+            configureTerminator(obj.serialDevice3, 'LF');
             % Create timers
             obj.Timer = timer(...
-                'ExecutionMode', 'fixedSpacing', ...    % Run timer repeatedly
-                'Period', 0.01, ...                     % Period is 1 second
-                'BusyMode', 'drop',...              % Queue timer callbacks when busy
-                'StartDelay', 0.1,...
-                'TimerFcn', @obj.TimerFcn, ...
-                'ErrorFcn',@obj.TimerErrorFcn);      % Specify callback function
+                'ExecutionMode', 'fixedSpacing', ...
+                'Period', 0.05,... % system variables sampling frequency
+                'StartDelay', 0.05,...
+                'BusyMode', 'drop',...
+                'TimerFcn', @obj.TimerFcn,...
+                'ErrorFcn',@obj.TimerErrorFcn);
             stop(obj.Timer);
-
             obj.Timer2 = timer( ...
                 'ExecutionMode', 'singleShot', ...
-                'StartDelay', 5*60, ...
+                'StartDelay', obj.userTimeOut, ...
                 'BusyMode', 'queue', ...
                 'TimerFcn', @obj.Timer2Fcn);
             stop(obj.Timer2);
-            display(obj.Timer);
-            display(obj.Timer2);
         end
-        %% Read TCP client commands
+        %% Class methods
+        % TCP communication
         function obj = readTCPClientCommand(obj, src, ~)
+            % Read TCP client commands
             if src.NumBytesAvailable>0
-                msg = read(src, src.NumBytesAvailable, 'char');
-                display(msg);
+                msg = readline(src);
                 obj = obj.processTCPClientCommand(msg);
-            else
-                return
             end
         end
         function obj = processTCPClientCommand(obj, msg)
-            log = load('user.mat');
-            user = log.user;
-            switch msg
+            % Process TCP client commands
+            msg = split(msg, '|');
+            command = msg{1};
+            userID = msg{2};
+            display(userID);
+            log = load('user.mat'); % load log file
+            user = log.user; % get user ID and status
+            switch command
+                % Check if a user is already connected
                 case 'check'
-                    
+                % Connect to raspberry pi
                 case 'connect'
+                    obj.count = 1; % reset counter
+                    obj.data_array = zeros(9, 10000); % reset data array
                     [obj, user.Status] = obj.connectRPi();
+                    user.ID = userID;
+                    % Notifies raspberry pi availability to each user
+                    write(obj.serialDevice3, [user.Status, '|', user.ID], 'char');
+                    % Start timer for checking user connection
                     start(obj.Timer2);
+                    % save log file
                     save('user.mat', 'user');
+                % Disconnect raspberry pi
                 case 'disconnect'
                     [obj, user.Status] = obj.disconnectRPi();
+                    user.ID = '-';
+                    write(obj.serialDevice3, [user.Status, '|', user.ID], 'char');
+                    % Stop timer for checking user connection
                     stop(obj.Timer2);
+                    % savel log file
                     save('user.mat', 'user');
             end
-            write(obj.tcpServer, user.Status, 'char');
+            % Send reply to tcp client
+            writeline(obj.tcpServerInit, user.Status);
         end
-        %% Read serial commands
-        function readControlVariables(obj, src, ~)
-            stop(obj.Timer);
-            if src.NumBytesAvailable>0
-                msg = read(src, 3, 'uint16');
-                write(obj.modbusServer, 'holdingregs', obj.StartReg, msg, 'uint16');
+        function obj = readControlVariables(obj, src, ~)
+            % Read control variables sent by user. Then resend them to the
+            % raspberry pi
+            if strcmp(obj.Timer.Running, 'on')
+                stop(obj.Timer);
             end
-            start(obj.Timer);
-        end
-        function readSerialCommand(obj, src, ~)
-            if src.NumBytesAvailable>0
-                msg = read(src, src.NumBytesAvailable, 'char');
-                msg = msg(1:end-1);
-                display(msg);
-                obj.processSerialCommand(msg);
+            try
+                if src.NumBytesAvailable==3
+                    msg = read(src, 3, 'uint8');
+                    write(obj.modbusServer, 'holdingregs', obj.StartReg, msg, 'uint16');
+                end
+            catch
+                
+            end
+            if strcmp(obj.Timer.Running, 'off')
+                start(obj.Timer); 
             end
         end
-        function processSerialCommand(obj, msg)
-            switch msg
-                case 'running'
+        function readTCPCommandsPLC(obj, src, ~)
+            % Read user commands
+            try
+                if src.NumBytesAvailable>0
+                    msg = read(src, src.NumBytesAvailable, 'char');
                     display(msg);
-                    pause(0.1);
+                    obj.processTCPCommands(msg);
+                end
+            catch
+                return
+            end
+        end
+        function processTCPCommands(obj, msg)
+            msg = split(msg, '|');
+            command = msg{1};
+            path = msg{2};
+            % Process serial commands
+            switch command
+                case 'running'
                     start(obj.Timer);
+                % Start PLC program
                 case 'start'
                     try
+                        obj.count = 1; % reset counter
+                        obj.data_array = zeros(9, 10000); % reset data array
+                        % start OpenPLC
                         system(obj.myraspi, 'sudo systemctl start openplc');
+                        % Create modbus server object
                         obj.modbusServer = modbus('tcpip', obj.modbusAddress, obj.modbusPort);
                         obj.PLCRunning = 1;
-                        writeline(obj.serialDevice, '1');
-                    catch
-                        write(obj.serialDevice, '0', 'char');
+                        % Send confirmation to user
+                        writeline(obj.tcpServer1, '1');
+                    catch me
+                        display(me.message);
+                        write(obj.tcpServer1, '0', 'char');
                     end
+                % Stop PLC program
                 case 'stop'
                     try 
                         stop(obj.Timer);
-                        obj.modbusServer = [];
+                        pause(0.1);
                         system(obj.myraspi, 'sudo systemctl stop openplc');
+                        obj.modbusServer = [];
                         pause(0.1);
                         obj.PLCRunning = 0;
-                        writeline(obj.serialDevice, '0');
-                    catch 
-                        writeline(obj.serialDevice, '1');
+                        writematrix(obj.data_array(:, 1:obj.count)', strcat(path, '\', 'results.xlsx'));
+                        writeline(obj.tcpServer1, '0');
+                    catch me
+                        display(me.message);
+                        writeline(obj.tcpServer1, '1');
                     end
+                % User connection notification
                 case 'connected'
+                    display('Restarting timer');
+                    % Restart timer for checking user connection
                     stop(obj.Timer2);
                     start(obj.Timer2);
+                % Send PLC program file to raspberry pi
                 otherwise
-                    system(obj.myraspi, 'sudo systemctl stop openplc');
-                    system(obj.myraspi, 'rm OpenPLC_v3/webserver/st_files/826743.st');
-                    putFile(obj.myraspi, msg, '/home/pi/OpenPLC_v3/webserver/st_files');
-                    system(obj.myraspi, '(cd OpenPLC_v3/webserver/scripts/ ; sh compile_program.sh 826743.st)');
-                    writeline(obj.serialDevice, '1');
-                    pause(0.1);
+                    if strcmp(path(1:end-1), obj.PLCfilename) % Check that PLC program name is correct
+                        try
+                            system(obj.myraspi, 'sudo systemctl stop openplc');
+                            display('sending PLC program...');
+                            system(obj.myraspi, strcat('rm OpenPLC_v3/webserver/st_files/', obj.PLCfilename));
+                            putFile(obj.myraspi, command, '/home/cnn/OpenPLC_v3/webserver/st_files');
+                            compile_command = strcat('(cd OpenPLC_v3/webserver/scripts/ ; sh compile_program.sh', {' '}, obj.PLCfilename, ')');
+                            display(compile_command{1});
+                            system(obj.myraspi, compile_command{1});
+                            writeline(obj.tcpServer1, '1');
+                        catch me
+                            display(me.message);
+                            writeline(obj.tcpServer1, '0');
+                        end
+                    else
+                        display('Incorrect filename');
+                        writeline(obj.tcpServer1, '0');
+                    end
             end
         end
         %% RPi connection
         function [obj, connected] = connectRPi(obj)
+            % Create connection with the raspberry pi
             connected = '0';
-            try 
+            try
                 obj.myraspi = raspi(obj.ip, obj.username, obj.password);
                 connected = '1';
             catch
@@ -163,40 +232,51 @@ classdef RPi_two_tank_lab<handle
             end
         end
         function [obj, connected] = disconnectRPi(obj)
+            % Close connection with the raspberry pi
             obj.myraspi = [];
             connected = '0';
         end
         %% Timer functions
-        function TimerFcn(obj, ~, ~)
+        function obj = TimerFcn(obj, timer, ~)
+            % Read system variables periodically
+            act_values = read(obj.modbusServer, 'coils', 5, 5); % system variables
+            i2c_values = read(obj.modbusServer, 'inputregs', 1, 4)/100;
+            % Store system variables
+            obj.data_array(:, obj.count) = [act_values'; i2c_values'];
+            % Send variables to user after 2 consecutive readings
             try
-            values = read(obj.modbusServer, 'coils', 3, 2);
-            obj.test_count = obj.test_count+1;
-            obj.test_array(:, obj.test_count) = values;
-            if any(obj.test_array(:, obj.test_count-1)~=obj.test_array(:, obj.test_count))
-                display(obj.test_array(:, obj.test_count))
-                write(obj.serialDevice2, values, 'double');
+            if mod(obj.count, obj.dataSize)==0
+                write(obj.tcpServer2, reshape(obj.data_array(:, obj.count-(obj.dataSize-1):obj.count), 1, []), 'double');
+                %write(obj.tcpServer2, [flip(obj.data_array(1, obj.count-(obj.dataSize-1):obj.count)), ...
+                %    flip(obj.data_array(3, obj.count-(obj.dataSize-1):obj.count))], 'double');
             end
-            catch me
-                display(me.message);
+            catch
+                
             end
+            obj.count = obj.count+1;
         end
-        function TimerErrorFcn(obj, ~, ~)
+        function obj=TimerErrorFcn(obj, timer, ~)
+            display('Timer error');
+            if strcmp(class(obj.modbusServer), 'double')
+                stop(obj.Timer);
+                return;
+            end
             start(obj.Timer);
         end
         function obj = Timer2Fcn(obj, ~, ~)
+            % Stop PLC program and disconnects RPi when user is no longer active
             display('User disconnected');
             stop(obj.Timer2);
             if obj.PLCRunning
                 stop(obj.Timer);
-            end
-            try 
                 system(obj.myraspi, 'sudo systemctl stop openplc');
-            catch
             end
             obj.PLCRunning = 0;
             obj.modbusServer = [];
             [obj, user.Status] = obj.disconnectRPi();
-            save('user.mat', 'user');
+            user.ID = '-';
+            write(obj.serialDevice3, [user.Status, '|', user.ID], 'char');
+            save('user.mat', 'user'); % save log file
         end
     end
 end

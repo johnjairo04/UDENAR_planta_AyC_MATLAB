@@ -1,5 +1,5 @@
 <deployment-project plugin="plugin.webdeploy" plugin-version="1.0">
-  <configuration file="C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\App\two_tank_lab.prj" location="C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\App" name="two_tank_lab" target="target.webdeploy" target-name="Web App Compiler">
+  <configuration file="C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App\two_tank_lab.prj" location="C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App" name="two_tank_lab" target="target.webdeploy" target-name="Web App Compiler">
     <param.appname>two_tank_lab</param.appname>
     <param.intermediate>${PROJECT_ROOT}\two_tank_lab</param.intermediate>
     <param.files.only>${PROJECT_ROOT}\two_tank_lab</param.files.only>
@@ -24,7 +24,6 @@
     </fileset.web.main>
     <fileset.resources />
     <fileset.depfun>
-      <file>${PROJECT_ROOT}\communicateTCPServer.m</file>
       <file>${PROJECT_ROOT}\excel_download.png</file>
       <file>${PROJECT_ROOT}\MaIE.png</file>
       <file>${PROJECT_ROOT}\send_file.png</file>
@@ -32,7 +31,7 @@
     </fileset.depfun>
     <fileset.package />
     <build-deliverables>
-      <file location="${PROJECT_ROOT}\two_tank_lab" name="two_tank_lab.ctf" optional="false">C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\App\two_tank_lab\two_tank_lab.ctf</file>
+      <file location="${PROJECT_ROOT}\two_tank_lab" name="two_tank_lab.ctf" optional="false">C:\Users\usuario\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App\two_tank_lab\two_tank_lab.ctf</file>
     </build-deliverables>
     <workflow />
     <matlab>
