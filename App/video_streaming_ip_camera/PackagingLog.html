@@ -1,0 +1,57 @@
+<html>  
+<head>
+    <style>     
+        html{     
+        background-color: white;     
+        padding: 5px;     
+        width: 95%;     
+        }     
+        pre {     
+        overflow-x: auto;     
+        white-space: pre-wrap;     
+        white-space: -moz-pre-wrap;     
+        white-space: -pre-wrap;     
+        white-space: -o-pre-wrap;     
+        word-wrap: break-word;     
+        }     
+    </style>     
+    
+    <script type="text/javascript">     
+            
+            function setup(htmlComponent) {     
+            
+				htmlComponent.addEventListener("DataChanged", function(event) {     
+				scrollID =  htmlComponent.Data;     
+					if (scrollID != ''){
+						if(scrollID==="bottom"){         
+							scrollToBottom();     
+						} else if(scrollID==="DOWNLOAD_MCRINSTALLER" || scrollID==="BUILD_MISSING" || scrollID==="SAMPLE_GEN" || scrollID==="USER_REQUESTED_PACKAGE"){     
+							document.getElementById(scrollID).scrollIntoView(true);     
+						} else {     
+							//document.body.innerHTML = document.body.innerHTML + scrollID;     
+							document.body.appendChild(scrollID);                 
+							scrollToBottom();     
+						}    
+						htmlComponent.Data = '';
+					}		
+				});          
+            }     
+            function scrollToBottom(){     
+            var scrollingElement = (document.scrollingElement || document.body);     
+            scrollingElement.scrollTop = scrollingElement.scrollHeight;     
+            }     
+            
+    </script> 
+</head>
+ <body><meta charset="UTF-8">        
+ <pre><font color=blue>mcc -W 'webapp:video_streaming_ip_camera,CONFIG:C:\Users\John\AppData\Local\Temp\tpa23a99a6_8fa0_4b6a_a6aa_4d2886e558a9.xml' -d 'C:\Users\John\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App\video_streaming_ip_camera' -v -Z autodetect -C 'C:\Users\John\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App\video_streaming_ip_camera.mlapp'</font>
+Compiler version: 8.4 (R2022a)
+Analyzing file dependencies. 
+<font color='orange'>Warning: Web apps that generate additional windows or apps are currently not supported. Check the following
+.mlapp files for window and app dependencies:
+C:\Users\John\MATLAB Drive\Job\UDENAR OPS\Two-tank
+laboratory\virtual_remote-lab\App\video_streaming_ip_camera.mlapp</font> 
+Parsing file "C:\Users\John\MATLAB Drive\Job\UDENAR OPS\Two-tank laboratory\virtual_remote-lab\App\video_streaming_ip_camera.mlapp" 
+	(referenced from command line). 
+
+</pre></body></html>
