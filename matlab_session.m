@@ -10,8 +10,7 @@ clear; clc; close all;
 user.ID = '-';
 user.Status = '0';
 save('user.mat', 'user');
-ip_address = '192.168.101.82';
-username = 'cnn';
+ip_address = '10.20.40.58';
+username = 'pi';
 password = 'raspberry';
-% microrredes (vnc)
 RPi2tanks = RPi_two_tank_lab(ip_address, username, password);

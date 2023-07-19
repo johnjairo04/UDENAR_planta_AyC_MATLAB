@@ -160,7 +160,7 @@ classdef RPi_two_tank_lab<handle
             % Process serial commands
             switch command
                 case 'running'
-                    start(obj.Timer);
+                    %start(obj.Timer);
                 % Start PLC program
                 case 'start'
                     try
@@ -169,7 +169,7 @@ classdef RPi_two_tank_lab<handle
                         % start OpenPLC
                         system(obj.myraspi, 'sudo systemctl start openplc');
                         % Create modbus server object
-                        obj.modbusServer = modbus('tcpip', obj.modbusAddress, obj.modbusPort);
+                        %obj.modbusServer = modbus('tcpip', obj.modbusAddress, obj.modbusPort);
                         obj.PLCRunning = 1;
                         % Send confirmation to user
                         writeline(obj.tcpServer1, '1');
